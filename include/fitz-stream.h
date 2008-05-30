@@ -11,9 +11,17 @@
 #error "fitz-base.h must be included before fitz-stream.h"
 #endif
 
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
 #include "fitz/stm_crypt.h"
 #include "fitz/stm_object.h"
 #include "fitz/stm_buffer.h"
 #include "fitz/stm_filter.h"
 #include "fitz/stm_stream.h"
+
+#ifdef  __cplusplus
+}
+#endif
 

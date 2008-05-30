@@ -15,6 +15,14 @@
 #error "fitz-world.h must be included before fitz-draw.h"
 #endif
 
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
 #include "fitz/draw_path.h"
 #include "fitz/draw_misc.h"
+
+#ifdef  __cplusplus
+}
+#endif
 
