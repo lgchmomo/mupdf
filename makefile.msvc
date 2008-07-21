@@ -28,7 +28,7 @@ CFLAGS = $(CFLAGS) /D "isnan=_isnan"
 
 CFLAGS = $(CFLAGS) /D "USE_STATIC_CMAPS" /Icmaps
 
-# CFLAGS = $(CFLAGS) /D "DUMP_STATIC_CMAPS"
+CFLAGS = $(CFLAGS) /D "DUMP_STATIC_CMAPS"
 
 # disable "warning C4244: 'argument' : conversion from 'foo' to 'bar', possible loss of data"
 CFLAGS = $(CFLAGS) /wd4244 /wd4996
