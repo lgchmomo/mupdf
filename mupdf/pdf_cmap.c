@@ -1147,6 +1147,12 @@ cleanup:
 	return error; /* already rethrown */
 }
 
+#ifdef WIN32
+#define DIR_SEP_STR "\\"
+#else
+#define DIR_SEP_STR "/"
+#endif
+
 /*
  * Load predefined CMap from system
  */
@@ -1171,7 +1177,7 @@ pdf_loadsystemcmap(pdf_cmap **cmapp, char *name)
 		return fz_throw("ioerror: CMAPDIR environment not set");
 
 	strlcpy(path, cmapdir, sizeof path);
-	strlcat(path, "/", sizeof path);
+	strlcat(path, DIR_SEP_STR, sizeof path);
 	strlcat(path, name, sizeof path);
 
 	error = fz_openrfile(&file, path);
