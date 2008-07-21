@@ -18,6 +18,8 @@
 #include <sys/time.h>
 #endif
 
+fz_renderer *drawgc = nil;
+
 /*
  * Common operations.
  * Parse page selectors.
@@ -29,15 +31,6 @@ char *srcname = "(null)";
 pdf_xref *src = nil;
 pdf_outline *srcoutline = nil;
 pdf_pagetree *srcpages = nil;
-
-void die(fz_error *eo)
-{
-	fflush(stdout);
-	fz_printerror(eo);
-	fflush(stderr);
-	fz_droperror(eo);
-	abort();
-}
 
 void closesrc(void)
 {
@@ -59,6 +52,18 @@ void closesrc(void)
 	}
 
 	srcname = nil;
+}
+
+void die(fz_error *eo)
+{
+	fflush(stdout);
+	fz_printerror(eo);
+	fflush(stderr);
+	fz_droperror(eo);
+	if (drawgc)
+		fz_droprenderer(drawgc);
+	closesrc();
+	abort();
 }
 
 void opensrc(char *filename, char *password, int loadpages)
@@ -478,7 +483,6 @@ struct benchmark
     int maxpage;
 };
 
-fz_renderer *drawgc = nil;
 int drawmode = DRAWPNM;
 char *drawpattern = nil;
 pdf_page *drawpage = nil;
