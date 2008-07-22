@@ -72,7 +72,7 @@ STREAM_OBJS = \
 	$(O)\stm_open.obj $(O)\stm_read.obj $(O)\stm_write.obj $(O)\filt_dctd.obj $(O)\filt_dcte.obj
 
 RASTER_OBJS = \
-	$(O)\archx86.obj $(O)\imagescale.obj $(O)\pathfill.obj $(O)\pixmap.obj \
+	$(O)\archx86.obj $(O)\blendmodes.obj $(O)\imagescale.obj $(O)\pathfill.obj $(O)\pixmap.obj \
 	$(O)\glyphcache.obj $(O)\imageunpack.obj $(O)\pathscan.obj $(O)\porterduff.obj \
 	$(O)\imagedraw.obj $(O)\meshdraw.obj $(O)\pathstroke.obj $(O)\render.obj
 
