@@ -83,17 +83,17 @@ BASE_SRC += \
 CFLAGS += -DNEED_STRLCPY
 endif
 
-# ./base/util_strsep.c \
-#./base/util_getopt.c
 #./base/base_cleanname.c
 #./base/base_cpudep.c
 
 STREAM_SRC = \
+	crypt_aes.c \
 	crypt_arc4.c \
 	crypt_crc32.c \
 	crypt_md5.c \
 	filt_a85d.c \
 	filt_a85e.c \
+	filt_aes.c \
 	filt_ahxd.c \
 	filt_ahxe.c \
 	filt_arc4.c \
