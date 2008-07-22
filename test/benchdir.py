@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+7#!/usr/bin/env python
 import sys, os, os.path, time
 
 # Written by Krzysztof Kowalczyk (http://blog.kowalczyk.info)
@@ -65,6 +65,7 @@ def do_one_pdf(pdfbench, pdffile, logfile):
 
 def benchdir(pdfbench, pdf_files_dir, logfile):
     file_no = 0
+    start_time = time.time()
     for pdffile in os.listdir(pdf_files_dir):
         pdffilepath = os.path.join(pdf_files_dir, pdffile)
         pdffilepath = os.path.realpath(pdffilepath)
