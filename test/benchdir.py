@@ -1,4 +1,4 @@
-7#!/usr/bin/env python
+#!/usr/bin/env python
 import sys, os, os.path, time
 
 # Written by Krzysztof Kowalczyk (http://blog.kowalczyk.info)
