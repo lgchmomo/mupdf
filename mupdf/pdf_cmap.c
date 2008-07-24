@@ -1206,7 +1206,6 @@ pdf_dumpcmapasccode(pdf_cmap *cmap, char *name)
 		++tmp;
 	}
 
-	printf("\nCMAP: filenamec='%s'\n", filenamec);
 	error = fz_openwfile(&file, filenamec);
 	if (error)
 	{
@@ -1296,12 +1295,24 @@ pdf_dumpcmapasccode(pdf_cmap *cmap, char *name)
 #define USE_90MSP_RKSJ_H
 #define USE_GBK_EUC_H
 #define USE_ADOBE_GB1_UCS2
+#define USE_ADOBE_CNS1_UCS2
+#define USE_ADOBE_KOREA1_UCS2
+#define USE_ETEN_B5_H
+#define USE_ETENMS_B5_H
+#define USE_KSCMS_UHC_H
+#define USE_UNIJIS_UCS2_H
 
 #define INCLUDE_CMAP_DATA
 #include "adobe_japan1_ucs2.c"
 #include "90msp_rksj_h.c"
 #include "adobe_gb1_ucs2.c"
 #include "gbk_euc_h.c"
+#include "adobe_cns1_ucs2.c"
+#include "adobe_korea1_ucs2.c"
+#include "eten_b5_h.c"
+#include "etenms_b5_h.c"
+#include "kscms_uhc_h.c"
+#include "unijis_ucs2_h.c"
 
 static fz_error *getstaticcmap(char *name, pdf_cmap **cmapp)
 {
@@ -1310,6 +1321,12 @@ static fz_error *getstaticcmap(char *name, pdf_cmap **cmapp)
 #include "90msp_rksj_h.c"
 #include "adobe_gb1_ucs2.c"
 #include "gbk_euc_h.c"
+#include "adobe_cns1_ucs2.c"
+#include "adobe_korea1_ucs2.c"
+#include "eten_b5_h.c"
+#include "etenms_b5_h.c"
+#include "kscms_uhc_h.c"
+#include "unijis_ucs2_h.c"
 	return fz_okay;
 }
 #else
@@ -1344,6 +1361,10 @@ pdf_loadsystemcmap(pdf_cmap **cmapp, char *name)
 	}
 	if (error)
 		fz_droperror(error);
+
+#ifdef DUMP_STATIC_CMAPS
+	printf("\nCMAP: filenamec='%s'\n", name);
+#endif
 
 	cmapdir = getenv("CMAPDIR");
 	if (!cmapdir)
