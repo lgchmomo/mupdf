@@ -1251,8 +1251,14 @@ pdf_dumpcmapasccode(pdf_cmap *cmap, char *name)
 	fz_print(file, "\tif (error)\n");
 	fz_print(file, "\t\treturn error;\n");
 	fz_print(file, "\tcmap->staticdata = 1;\n");
-	fz_print(file, "\tcmap->ranges = (pdf_range*)&g_cmap_%s_ranges[0];\n", id);
-	fz_print(file, "\tcmap->table = (int*)&g_cmap_%s_table[0];\n", id);
+	if (r && cmap->rlen)
+		fz_print(file, "\tcmap->ranges = (pdf_range*)&g_cmap_%s_ranges[0];\n", id);
+	else
+		fz_print(file, "\tcmap->ranges = 0;\n");
+	if (t && cmap->tlen)
+		fz_print(file, "\tcmap->table = (int*)&g_cmap_%s_table[0];\n", id);
+	else
+		fz_print(file, "\tcmap->table = 0;\n");
 	fz_print(file, "\tstrcpy(cmap->cmapname, \"%s\");\n", cmap->cmapname);
 	fz_print(file, "\tstrcpy(cmap->usecmapname, \"%s\");\n", cmap->usecmapname);
 	fz_print(file, "\tcmap->wmode = %d;\n", cmap->wmode);
