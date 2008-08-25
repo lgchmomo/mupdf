@@ -123,6 +123,7 @@ ftrender(fz_glyph *glyph, fz_font *fzfont, int cid, fz_matrix trm)
 	float scale;
 	int gid;
 	int x, y;
+	int hint = font->hint;
 
 	gid = ftcidtogid(font, cid);
 
@@ -162,38 +163,42 @@ ftrender(fz_glyph *glyph, fz_font *fzfont, int cid, fz_matrix trm)
 	 */
 
 #ifdef HINT
-	scale = fz_matrixexpansion(trm);
-	m.xx = trm.a * 65536 / scale;
-	m.yx = trm.b * 65536 / scale;
-	m.xy = trm.c * 65536 / scale;
-	m.yy = trm.d * 65536 / scale;
-	v.x = 0;
-	v.y = 0;
-
-	FT_Set_Char_Size(face, 64 * scale, 64 * scale, 72, 72);
-	FT_Set_Transform(face, &m, &v);
-
-	fterr = FT_Load_Glyph(face, gid, FT_LOAD_NO_BITMAP);
-	if (fterr)
-		fz_warn("freetype load glyph: %s", ft_errstr(fterr));
-
-#else
-
-	m.xx = trm.a * 64;	/* should be 65536 */
-	m.yx = trm.b * 64;
-	m.xy = trm.c * 64;
-	m.yy = trm.d * 64;
-	v.x = trm.e * 64;
-	v.y = trm.f * 64;
-
-	FT_Set_Char_Size(face, 65536, 65536, 72, 72); /* should be 64, 64 */
-	FT_Set_Transform(face, &m, &v);
-
-	fterr = FT_Load_Glyph(face, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING);
-	if (fterr)
-		fz_warn("freetype load glyph: %s", ft_errstr(fterr));
-
+	hint = 1;
 #endif
+
+	if (hint)
+	{
+		scale = fz_matrixexpansion(trm);
+		m.xx = trm.a * 65536 / scale;
+		m.yx = trm.b * 65536 / scale;
+		m.xy = trm.c * 65536 / scale;
+		m.yy = trm.d * 65536 / scale;
+		v.x = 0;
+		v.y = 0;
+
+		FT_Set_Char_Size(face, 64 * scale, 64 * scale, 72, 72);
+		FT_Set_Transform(face, &m, &v);
+
+		fterr = FT_Load_Glyph(face, gid, FT_LOAD_NO_BITMAP);
+		if (fterr)
+			fz_warn("freetype load glyph: %s", ft_errstr(fterr));
+	}
+	else
+	{
+		m.xx = trm.a * 64;	/* should be 65536 */
+		m.yx = trm.b * 64;
+		m.xy = trm.c * 64;
+		m.yy = trm.d * 64;
+		v.x = trm.e * 64;
+		v.y = trm.f * 64;
+
+		FT_Set_Char_Size(face, 65536, 65536, 72, 72); /* should be 64, 64 */
+		FT_Set_Transform(face, &m, &v);
+
+		fterr = FT_Load_Glyph(face, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING);
+		if (fterr)
+			fz_warn("freetype load glyph: %s", ft_errstr(fterr));
+	}
 
 	fterr = FT_Render_Glyph(face->glyph, ft_render_mode_normal);
 	if (fterr)
@@ -263,6 +268,19 @@ static void ftdropfont(fz_font *font)
 		fz_dropbuffer(pfont->fontdata);
 }
 
+/* List of fonts that don't render properly without hinting. This list comes
+   freetype */
+static const char* const force_hinting[] =
+{
+  "DFKaiSho-SB",	 /* dfkaisb.ttf */
+  "DFKai-SB",		 /* kaiu.ttf */
+  "HuaTianSongTi?",  /* htst3.ttf */
+  "MingLiU",		 /* mingliu.ttf & mingliu.ttc */
+  "PMingLiU",		 /* mingliu.ttc */
+  "MingLi43",		 /* mingli.ttf */
+  NULL
+};
+
 pdf_font *
 pdf_newfont(char *name)
 {
@@ -303,6 +321,16 @@ pdf_newfont(char *name)
 	for (i = 0; i < 256; i++)
 		font->charprocs[i] = nil;
 
+	font->hint = 0;
+	for (i = 0; force_hinting[i]; i++)
+	{
+		char *pos = strstr(name, force_hinting[i]);
+		if (pos && (pos == name || pos[-1] == '+'))
+		{
+			font->hint = 1;
+			break;
+		}
+	}
 	return font;
 }
 
