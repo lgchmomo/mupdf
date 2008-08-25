@@ -146,6 +146,8 @@ static pdf_fontlistMS fontlistMS =
 	0,
 };
 
+struct pdf_fontmapMS_s defaultSubstitute;
+
 static int
 compare(const void *elem1, const void *elem2)
 {
@@ -217,6 +219,24 @@ removeredundancy(pdf_fontlistMS *fl)
 		fprintf(stdout,"%s , %s , %d\n",fl->fontmap[i].fontface,
 			fl->fontmap[i].fontpath,fl->fontmap[i].index);
 #endif
+}
+
+static void
+finddefaultsubstitutes(pdf_fontlistMS *fl)
+{
+	int i;
+	for (i = 0; i < fl->len; ++i)
+	{
+		char *face = fl->fontmap[i].fontface;
+#if defined(_MSC_VER) && 0
+		OutputDebugStringA(face);
+		OutputDebugStringA("\n");
+#endif
+		if (0 == strcmp(face, "TimesNewRomanPSMT"))
+		{
+			defaultSubstitute = fl->fontmap[i];
+		}
+	}
 }
 
 static fz_error *
@@ -609,10 +629,18 @@ pdf_createfontlistMS()
 	FindClose(hList);
 
 	removeredundancy(&fontlistMS);
+	finddefaultsubstitutes(&fontlistMS);
 
 	return fz_okay;
 }
 
+static void
+findsubstitute(char *fontname, char **fontpath, int *index)
+{
+	// TODO: do something more clever
+	*fontpath = defaultSubstitute.fontpath;
+	*index = defaultSubstitute.index;
+}
 void
 pdf_destoryfontlistMS()
 {
@@ -659,8 +687,7 @@ pdf_lookupfontMS2(char *fontname, char **fontpath, int *index, int *didfind)
 	}
 	else
 	{
-		*fontpath = fontlistMS.fontmap[0].fontpath;
-		*index = fontlistMS.fontmap[0].index;
+		findsubstitute(fontname, fontpath, index);
 	}
 
 	*didfind = 0;
