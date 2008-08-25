@@ -152,9 +152,9 @@ compare(const void *elem1, const void *elem2)
 	pdf_fontmapMS *val1 = (pdf_fontmapMS *)elem1;
 	pdf_fontmapMS *val2 = (pdf_fontmapMS *)elem2;
 
-	if(val1->fontface[0] == 0)
+	if (val1->fontface[0] == 0)
 		return 1;
-	if(val2->fontface[0] == 0)
+	if (val2->fontface[0] == 0)
 		return -1;
 
 	return stricmp(val1->fontface, val2->fontface);
@@ -202,9 +202,9 @@ removeredundancy(pdf_fontlistMS *fl)
 	int redundancy_count = 0;
 
 	qsort(fl->fontmap,fl->len,sizeof(pdf_fontmapMS),compare);
-	for(i = 0; i < fl->len - 1; ++i)
+	for (i = 0; i < fl->len - 1; ++i)
 	{
-		if(strcmp(fl->fontmap[i].fontface,fl->fontmap[i+1].fontface) == 0)
+		if (strcmp(fl->fontmap[i].fontface,fl->fontmap[i+1].fontface) == 0)
 		{
 			fl->fontmap[i].fontface[0] = 0;
 			++redundancy_count;
@@ -213,7 +213,7 @@ removeredundancy(pdf_fontlistMS *fl)
 	qsort(fl->fontmap,fl->len,sizeof(pdf_fontmapMS),compare);
 	fl->len -= redundancy_count;
 #if 0
-	for(i = 0; i < fl->len; ++i)
+	for (i = 0; i < fl->len; ++i)
 		fprintf(stdout,"%s , %s , %d\n",fl->fontmap[i].fontface,
 			fl->fontmap[i].fontpath,fl->fontmap[i].index);
 #endif
@@ -226,11 +226,11 @@ swapword(char* pbyte, int nLen)
 	char tmp;
 	int nMax;
 
-	if(nLen%2)
+	if (nLen % 2)
 		return fz_throw("fonterror");
 
 	nMax = nLen / 2;
-	for(i = 0; i < nLen; ++i) {
+	for (i = 0; i < nLen; ++i) {
 		tmp = pbyte[i*2];
 		pbyte[i*2] = pbyte[i*2+1];
 		pbyte[i*2+1] = tmp;
@@ -251,7 +251,7 @@ decodeunicodeBMP(char* source, int sourcelen,char* dest, int destlen)
 	converted = WideCharToMultiByte(CP_ACP, 0, tmp,
 		-1, dest, destlen, NULL, NULL);
 
-	if(converted == 0)
+	if (converted == 0)
 		return fz_throw("fonterror");
 
 	return 0;
@@ -284,7 +284,7 @@ decodemacintoshplatform(char* source, int sourcelen,char* dest, int destlen, int
 	switch(enctype)
 	{
 	case MAC_ROMAN:
-		if(sourcelen + 1 > destlen)
+		if (sourcelen + 1 > destlen)
 			err = fz_throw("fonterror : short buf lenth");
 		else
 		{
@@ -323,8 +323,8 @@ growfontlist(pdf_fontlistMS *fl)
 	int newcap;
 	pdf_fontmapMS *newitems;
 
-	if(fl->cap == 0)
-		newcap = 32;
+	if (fl->cap == 0)
+		newcap = 1024;
 	else
 		newcap = fl->cap * 2;
 
@@ -346,12 +346,12 @@ insertmapping(pdf_fontlistMS *fl, char *facename, char *path, int index)
 {
 	fz_error *err;
 
-	if(fl->len == fl->cap) {
+	if (fl->len == fl->cap) {
 		err = growfontlist(fl);
-		if(err) return err;
+		if (err) return err;
 	}
 
-	if(fl->len >= fl->cap)
+	if (fl->len >= fl->cap)
 		return fz_throw("fonterror : fontlist overflow");
 
 	strlcpy(fl->fontmap[fl->len].fontface, facename,
@@ -388,12 +388,12 @@ parseTTF(fz_stream *file, int offset, int index, char *path)
 	ttOffsetTable.uMinorVersion = SWAPWORD(ttOffsetTable.uMinorVersion);
 
 	//check is this is a true type font and the version is 1.0
-	if(ttOffsetTable.uMajorVersion != 1 || ttOffsetTable.uMinorVersion != 0)
+	if (ttOffsetTable.uMajorVersion != 1 || ttOffsetTable.uMinorVersion != 0)
 		return fz_throw("fonterror : invalid font version");
 
 	found = 0;
 
-	for(i = 0; i< ttOffsetTable.uNumOfTables; i++)
+	for (i = 0; i< ttOffsetTable.uNumOfTables; i++)
 	{
 		SAFE_FZ_READ(file,&tblDir,sizeof(TT_TABLE_DIRECTORY));
 
@@ -424,7 +424,7 @@ parseTTF(fz_stream *file, int offset, int index, char *path)
 
 		offset = tblDir.uOffset + sizeof(TT_NAME_TABLE_HEADER);
 
-		for(i = 0; i < ttNTHeader.uNRCount && err == nil; ++i)
+		for (i = 0; i < ttNTHeader.uNRCount && err == nil; ++i)
 		{
 			fz_seek(file, offset + sizeof(TT_NAME_RECORD)*i, 0);
 			SAFE_FZ_READ(file,&ttRecord,sizeof(TT_NAME_RECORD));
@@ -433,7 +433,7 @@ parseTTF(fz_stream *file, int offset, int index, char *path)
 			ttRecord.uLanguageID = SWAPWORD(ttRecord.uLanguageID);
 
 			// Full Name
-			if(ttRecord.uNameID == 6)
+			if (ttRecord.uNameID == 6)
 			{
 				ttRecord.uPlatformID = SWAPWORD(ttRecord.uPlatformID);
 				ttRecord.uEncodingID = SWAPWORD(ttRecord.uEncodingID);
@@ -462,7 +462,7 @@ parseTTF(fz_stream *file, int offset, int index, char *path)
 					break;
 				}
 
-				if(err == nil)
+				if (err == nil)
 					err = insertmapping(&fontlistMS, szTemp, path, index);
 			}
 		}
@@ -479,15 +479,15 @@ parseTTFs(char *path)
 	fz_stream *file = nil;
 
 	err = fz_openrfile(&file, path);
-	if(err)
+	if (err)
 		goto cleanup;
 
 	err = parseTTF(file,0,0,path);
-	if(err)
+	if (err)
 		goto cleanup;
 
 cleanup:
-	if(file)
+	if (file)
 		fz_dropstream(file);
 
 	return err;
@@ -503,26 +503,26 @@ parseTTCs(char *path)
 	ULONG i;
 
 	err = fz_openrfile(&file, path);
-	if(err)
+	if (err)
 		goto cleanup;
 
 	SAFE_FZ_READ(file, &fontcollectioin, sizeof(FONT_COLLECTION));
-	if(memcmp(fontcollectioin.Tag,"ttcf",sizeof(fontcollectioin.Tag)) == 0)
+	if (memcmp(fontcollectioin.Tag,"ttcf",sizeof(fontcollectioin.Tag)) == 0)
 	{
 		fontcollectioin.Version = SWAPLONG(fontcollectioin.Version);
 		fontcollectioin.NumFonts = SWAPLONG(fontcollectioin.NumFonts);
-		if( fontcollectioin.Version == TTC_VERSION1 ||
+		if (fontcollectioin.Version == TTC_VERSION1 ||
 			fontcollectioin.Version == TTC_VERSION2 )
 		{
 			ULONG *offsettable = fz_malloc(sizeof(ULONG)*fontcollectioin.NumFonts);
-			if(offsettable == nil)
+			if (offsettable == nil)
 			{
 				err = fz_outofmem;
 				goto cleanup;
 			}
 
 			SAFE_FZ_READ(file, offsettable, sizeof(ULONG)*fontcollectioin.NumFonts);
-			for(i = 0; i < fontcollectioin.NumFonts; ++i)
+			for (i = 0; i < fontcollectioin.NumFonts; ++i)
 			{
 				offsettable[i] = SWAPLONG(offsettable[i]);
 				parseTTF(file,offsettable[i],i,path);
@@ -543,7 +543,7 @@ parseTTCs(char *path)
 
 
 cleanup:
-	if(file)
+	if (file)
 		fz_dropstream(file);
 
 	return err;
@@ -644,7 +644,7 @@ pdf_lookupfontMS2(char *fontname, char **fontpath, int *index, int *didfind)
 		}
 	}
 
-	strlcpy(fontmap.fontface,pattern,sizeof(fontmap.fontface));
+	strlcpy(fontmap.fontface,pattern, sizeof(fontmap.fontface));
 	found = localbsearch(&fontmap, fontlistMS.fontmap, fontlistMS.len, sizeof(pdf_fontmapMS),compare);
 
 #if 0
@@ -663,9 +663,9 @@ pdf_lookupfontMS2(char *fontname, char **fontpath, int *index, int *didfind)
 		*index = fontlistMS.fontmap[0].index;
 	}
 
-    *didfind = 0;
-    if (found)
-    	*didfind = 1;
+	*didfind = 0;
+	if (found)
+		*didfind = 1;
 	return fz_okay;
 }
 
@@ -689,7 +689,7 @@ static fz_error *initfontlibs(void)
 		return fz_throw("freetype version too old: %d.%d.%d", maj, min, pat);
 
 	err = pdf_createfontlistMS();
-	if(err)
+	if (err)
 		return err;
 
 	return fz_okay;
