@@ -6,7 +6,6 @@ pdf_loadcompositeshadefunc(fz_shade *shade, pdf_xref *xref, fz_obj *shading, fz_
 {
 	fz_error *error;
 	pdf_function *func;
-	fz_obj *obj;
 	int i;
 
 	error = pdf_loadfunction(&func, xref, funcref);
