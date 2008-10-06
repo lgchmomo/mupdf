@@ -601,7 +601,7 @@ static pdf_token_e tokenfromkeyword(char *key)
 	return PDF_TKEYWORD;
 }
 
-static int codefromstring(unsigned char *buf, int len)
+static int codefromstring(char *buf, int len)
 {
 	int a = 0;
 	while (len--)
@@ -612,11 +612,14 @@ static int codefromstring(unsigned char *buf, int len)
 static fz_error *lexcmap(pdf_token_e *tok, fz_stream *file, char *buf, int n, int *sl)
 {
 	fz_error *error;
+
 	error = pdf_lex(tok, file, buf, n, sl);
-	if (!error && *tok == PDF_TKEYWORD)
-		*tok = tokenfromkeyword(buf);
 	if (error)
 		return fz_rethrow(error, "cannot parse cmap token");
+
+	if (*tok == PDF_TKEYWORD)
+		*tok = tokenfromkeyword(buf);
+
 	return fz_okay;
 }
 
