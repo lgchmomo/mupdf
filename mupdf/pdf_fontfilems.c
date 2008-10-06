@@ -1,6 +1,17 @@
 #include "fitz.h"
 #include "mupdf.h"
 
+/* we use built-in fonts in addition to those installed on windows
+   because the metric for Times-Roman in windows fonts seems wrong
+   and we end up with over-lapping text if this font is used.
+   poppler doesn't have this problem even when using windows fonts
+   so maybe there's a better fix. */
+#define USE_BUILTIN_FONTS 1
+
+#ifdef USE_BUILTIN_FONTS
+#include "mupdf/base14.h"
+#endif
+
 #include <windows.h>
 
 #include <ft2build.h>
@@ -147,9 +158,63 @@ static pdf_fontlistMS fontlistMS =
 };
 
 struct pdf_fontmapMS_s defaultSubstitute;
+enum
+{
+	FD_FIXED = 1 << 0,
+	FD_SERIF = 1 << 1,
+	FD_SYMBOLIC = 1 << 2,
+	FD_SCRIPT = 1 << 3,
+	FD_NONSYMBOLIC = 1 << 5,
+	FD_ITALIC = 1 << 6,
+	FD_ALLCAP = 1 << 16,
+	FD_SMALLCAP = 1 << 17,
+	FD_FORCEBOLD = 1 << 18
+};
+
+/* A little bit more sophisticated name matching so that e.g. "EurostileExtended"
+   matches "EurostileExtended-Roman" */
+static int
+fontnamematches(const char *s1, const char *s2)
+{
+	const char *rest;
+	int c1, c2;
+	while (*s1 && *s2)
+	{
+		c1 = tolower(*s1++);
+		c2 = tolower(*s2++);
+		if (c1 != c2)
+			return 0;
+	}
+	if (!*s1 && !*s2)
+		return 1;
+	rest = s2;
+	if (*s1)
+		rest = s1;
+
+	if (0 == stricmp(rest, "-roman"))
+		return 1;
+	return 0;
+}
 
 static int
-compare(const void *elem1, const void *elem2)
+lookupcompare(const void *elem1, const void *elem2)
+{
+	pdf_fontmapMS *val1 = (pdf_fontmapMS *)elem1;
+	pdf_fontmapMS *val2 = (pdf_fontmapMS *)elem2;
+
+	if (val1->fontface[0] == 0)
+		return 1;
+	if (val2->fontface[0] == 0)
+		return -1;
+
+	if (fontnamematches(val1->fontface, val2->fontface))
+		return 0;
+
+	return stricmp(val1->fontface, val2->fontface);
+}
+
+static int
+sortcompare(const void *elem1, const void *elem2)
 {
 	pdf_fontmapMS *val1 = (pdf_fontmapMS *)elem1;
 	pdf_fontmapMS *val2 = (pdf_fontmapMS *)elem2;
@@ -203,7 +268,7 @@ removeredundancy(pdf_fontlistMS *fl)
 	int roffset = 0;
 	int redundancy_count = 0;
 
-	qsort(fl->fontmap,fl->len,sizeof(pdf_fontmapMS),compare);
+	qsort(fl->fontmap, fl->len, sizeof(pdf_fontmapMS), sortcompare);
 	for (i = 0; i < fl->len - 1; ++i)
 	{
 		if (strcmp(fl->fontmap[i].fontface,fl->fontmap[i+1].fontface) == 0)
@@ -212,7 +277,7 @@ removeredundancy(pdf_fontlistMS *fl)
 			++redundancy_count;
 		}
 	}
-	qsort(fl->fontmap,fl->len,sizeof(pdf_fontmapMS),compare);
+	qsort(fl->fontmap, fl->len, sizeof(pdf_fontmapMS), sortcompare);
 	fl->len -= redundancy_count;
 #if 0
 	for (i = 0; i < fl->len; ++i)
@@ -673,7 +738,7 @@ pdf_lookupfontMS2(char *fontname, char **fontpath, int *index, int *didfind)
 	}
 
 	strlcpy(fontmap.fontface,pattern, sizeof(fontmap.fontface));
-	found = localbsearch(&fontmap, fontlistMS.fontmap, fontlistMS.len, sizeof(pdf_fontmapMS),compare);
+	found = localbsearch(&fontmap, fontlistMS.fontmap, fontlistMS.len, sizeof(pdf_fontmapMS), lookupcompare);
 
 #if 0
 	if (!found)
@@ -723,7 +788,7 @@ static fz_error *initfontlibs(void)
 }
 
 static fz_error *
-pdf_lookupfontMS(pdf_font *font, char *fontname, char **fontpath, int *index)
+pdf_lookupfontMS(pdf_font *font, char *fontname, char *collection, char **fontpath, int *index)
 {
 	fz_error  *error;
 	int found;
@@ -742,8 +807,113 @@ pdf_lookupfontMS(pdf_font *font, char *fontname, char **fontpath, int *index)
 		if (error)
 			return error;
 	}
+	if (!found && collection)
+	{
+		if ((!strcmp(collection, "Adobe-Japan1")) || (!strcmp(collection, "Adobe-Japan2")))
+		{
+			if (!strcmp(fontname, "GothicBBB-Medium"))
+			{
+				error = pdf_lookupfontMS2("MS-Gothic", fontpath, index, &found);
+				if (error)
+					return error;
+			}
+			else if (!strcmp(fontname, "Ryumin-Light"))
+			{
+				error = pdf_lookupfontMS2("MS-Mincho", fontpath, index, &found);
+				if (error)
+					return error;
+			}
+			else if (font->flags & FD_FIXED)
+			{
+				if (font->flags & FD_SERIF)
+				{
+					error = pdf_lookupfontMS2("MS-Mincho", fontpath, index, &found);
+					if (error)
+						return error;
+				}
+				else
+				{
+					error = pdf_lookupfontMS2("MS-Gothic", fontpath, index, &found);
+					if (error)
+						return error;
+				}
+			}
+			else
+			{
+				if (font->flags & FD_SERIF)
+				{
+					error = pdf_lookupfontMS2("MS-PMincho", fontpath, index, &found);
+					if (error)
+						return error;
+				}
+				else
+				{
+					error = pdf_lookupfontMS2("MS-PGothic", fontpath, index, &found);
+					if (error)
+						return error;
+				}
+			}
+			font->substitute = 1;
+		}
+	}
 	return fz_okay;
 }
+
+#ifdef USE_BUILTIN_FONTS
+/* based on (and duplicates lots of) pdf_fontfile.c */
+static const struct
+{
+	const char *name;
+	const unsigned char *cff;
+	const unsigned int *len;
+} basefonts[15] = {
+	{ "Courier",
+		fonts_NimbusMonL_Regu_cff,
+		&fonts_NimbusMonL_Regu_cff_len },
+	{ "Courier-Bold",
+		fonts_NimbusMonL_Bold_cff,
+		&fonts_NimbusMonL_Bold_cff_len },
+	{ "Courier-Oblique",
+		fonts_NimbusMonL_ReguObli_cff,
+		&fonts_NimbusMonL_ReguObli_cff_len },
+	{ "Courier-BoldOblique",
+		fonts_NimbusMonL_BoldObli_cff,
+		&fonts_NimbusMonL_BoldObli_cff_len },
+	{ "Helvetica",
+		fonts_NimbusSanL_Regu_cff,
+		&fonts_NimbusSanL_Regu_cff_len },
+	{ "Helvetica-Bold",
+		fonts_NimbusSanL_Bold_cff,
+		&fonts_NimbusSanL_Bold_cff_len },
+	{ "Helvetica-Oblique",
+		fonts_NimbusSanL_ReguItal_cff,
+		&fonts_NimbusSanL_ReguItal_cff_len },
+	{ "Helvetica-BoldOblique",
+		fonts_NimbusSanL_BoldItal_cff,
+		&fonts_NimbusSanL_BoldItal_cff_len },
+	{ "Times-Roman",
+		fonts_NimbusRomNo9L_Regu_cff,
+		&fonts_NimbusRomNo9L_Regu_cff_len },
+	{ "Times-Bold",
+		fonts_NimbusRomNo9L_Medi_cff,
+		&fonts_NimbusRomNo9L_Medi_cff_len },
+	{ "Times-Italic",
+		fonts_NimbusRomNo9L_ReguItal_cff,
+		&fonts_NimbusRomNo9L_ReguItal_cff_len },
+	{ "Times-BoldItalic",
+		fonts_NimbusRomNo9L_MediItal_cff,
+		&fonts_NimbusRomNo9L_MediItal_cff_len },
+	{ "Symbol",
+		fonts_StandardSymL_cff,
+		&fonts_StandardSymL_cff_len },
+	{ "ZapfDingbats",
+		fonts_Dingbats_cff,
+		&fonts_Dingbats_cff_len },
+	{ "Chancery",
+		fonts_URWChanceryL_MediItal_cff,
+		&fonts_URWChanceryL_MediItal_cff_len }
+};
+#endif
 
 fz_error *
 pdf_loadbuiltinfont(pdf_font *font, char *basefont)
@@ -755,7 +925,41 @@ pdf_loadbuiltinfont(pdf_font *font, char *basefont)
 	char *file;
 	int index;
 
-	error = pdf_lookupfontMS(font, basefont,&file,&index);
+#ifdef USE_BUILTIN_FONTS
+	/* try built-in fonts first */
+	int i;
+	unsigned char *data;
+	unsigned int len;
+	int found = 0;
+
+	for (i = 0; i < 15; i++) {
+		if (!strcmp(basefont, basefonts[i].name)) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found) {
+		pdf_logfont("load builtin font %s\n", basefont);
+
+		data = (unsigned char *) basefonts[i].cff;
+		len = *basefonts[i].len;
+
+		fterr = FT_New_Memory_Face(ftlib, data, len, 0, (FT_Face*)&font->ftface);
+		/* TODO: fails on "Helvetica" */
+#if 0
+		if (fterr)
+			return fz_throw("freetype: cannot load font: %s", ft_errstr(fterr));
+
+		return fz_okay;
+#else
+		if (!fterr)
+			return fz_okay;
+#endif
+	}
+#endif
+
+	error = pdf_lookupfontMS(font, basefont, NULL, &file, &index);
 	if (error)
 		return error;
 
@@ -777,7 +981,7 @@ pdf_loadsystemfont(pdf_font *font, char *basefont, char *collection)
 	char *file;
 	int index;
 
-	error = pdf_lookupfontMS(font, basefont,&file,&index);
+	error = pdf_lookupfontMS(font, basefont, collection, &file, &index);
 	if (error)
 		goto cleanup;
 
